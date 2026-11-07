@@ -1,0 +1,32 @@
+{
+  "prompt": 12,
+  "study_pathway": "B - controlled comparative study",
+  "research_question": "Does p90 token NLL rank hallucinations better than mean token NLL?",
+  "model": "distilgpt2 surrogate scorer",
+  "source_zip": "AITR_Prompt10_FINAL.zip",
+  "splits": {
+    "train": 420,
+    "validation": 90,
+    "test": 90
+  },
+  "positive_label": 1,
+  "score_direction": "higher means more predicted hallucination",
+  "primary_metric": "average_precision",
+  "secondary_metric": "auroc",
+  "comparators": [
+    "mean_nll",
+    "p90_nll",
+    "answer_token_length"
+  ],
+  "primary_contrast": "p90_nll versus mean_nll",
+  "single_signal_selection": "higher validation AP; exact tie -> mean_nll",
+  "selected_single_signal": "p90_nll",
+  "test_set_status": "NOT EVALUATED; reserved for Prompt 13",
+  "original_row_audit": "NOT PERFORMED",
+  "limitations": [
+    "Small validation set (90 rows; 14 positive cases)",
+    "Synthetic split-specific IDs, not original HaluEval source IDs",
+    "DistilGPT-2 is a surrogate, not generator confidence",
+    "Answer-length sensitivity is exploratory"
+  ]
+}

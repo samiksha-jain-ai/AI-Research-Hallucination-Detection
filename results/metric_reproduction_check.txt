@@ -1,0 +1,10 @@
+     split              column  average_precision    auroc
+validation            mean_nll           0.245987 0.578947
+validation             p90_nll           0.282735 0.588346
+validation answer_token_length           0.222009 0.435620
+      test            mean_nll           0.223421 0.497180
+      test             p90_nll           0.203282 0.504432
+      test answer_token_length           0.177710 0.328364
+RECOMPUTED METRICS: PASS
+Saved: results/recomputed_results.csv
+MATCH SAVED RESULTS: PASS

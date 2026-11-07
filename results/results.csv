@@ -1,0 +1,4 @@
+method,column,split,n,positives,prevalence,average_precision,auroc
+Mean token NLL (baseline),mean_nll,test,90,17,0.18888888888888888,0.22342085241315485,0.49717969379532634
+90th percentile token NLL (proposed),p90_nll,test,90,17,0.18888888888888888,0.20328201741800678,0.5044319097502015
+Answer length (control),answer_token_length,test,90,17,0.18888888888888888,0.177709609025949,0.3283642224012893

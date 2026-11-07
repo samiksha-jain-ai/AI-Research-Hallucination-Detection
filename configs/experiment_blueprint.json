@@ -1,0 +1,27 @@
+{
+  "protocol_version": "1.0",
+  "seed": 42,
+  "dataset": {
+    "name": "HaluEval general_data.json",
+    "repository": "https://github.com/RUCAIBox/HaluEval",
+    "positive_label": "Yes",
+    "target_sample_size": 600,
+    "fallback_sample_size": 300,
+    "split_ratios": {"train": 0.70, "validation": 0.15, "test": 0.15},
+    "group_split_key": "normalized_user_query"
+  },
+  "scoring": {
+    "model": "distilgpt2",
+    "template": "Question: {user_query}\nAnswer: {chatgpt_response}",
+    "answer_tokens_only": true,
+    "scores": ["mean_nll", "p90_nll", "answer_length"],
+    "higher_score_means_hallucination": true
+  },
+  "evaluation": {
+    "primary_metric": "average_precision",
+    "secondary_metrics": ["roc_auc", "precision", "recall", "f1", "confusion_matrix"],
+    "threshold_selection": "maximize_validation_f1",
+    "paired_bootstrap_replicates": 1000
+  },
+  "status": "planned_not_executed"
+}

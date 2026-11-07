@@ -1,0 +1,185 @@
+\documentclass[manuscript,screen]{acmart}
+\settopmatter{printacmref=false}
+\setcopyright{none}
+\acmDOI{}
+\acmISBN{}
+\acmConference{}{}{}
+\acmYear{2026}
+\usepackage{amsmath,booktabs,graphicx,array,url}
+\title{Does High-Loss Token Aggregation Improve Hallucination Ranking? A Controlled Study with Surrogate Language-Model Uncertainty}
+\author{Samiksha Jain}
+\affiliation{\institution{Indian Institute of Information Technology Allahabad}\department{Department of Information Technology}\city{Prayagraj}\state{Uttar Pradesh}\country{India}}
+\email{mde2026013@iiita.ac.in}
+\begin{abstract}
+
+Token likelihood is an inexpensive signal for uncertainty, but it is unclear whether emphasizing high-loss tokens improves hallucination ranking relative to averaging token losses. We compare mean answer-token negative log-likelihood (NLL) with its 90th percentile (P90) and an answer-length control. We score 600 sampled HaluEval responses using DistilGPT-2 as a surrogate scorer, with a 420/90/90 train/validation/test partition. P90 was selected on validation average precision (AP), 0.2827 versus 0.2460 for mean NLL. On the untouched 90-response test split, however, P90 AP was 0.2033 versus 0.2234 for mean NLL, while AUROC values were 0.5044 and 0.4972, respectively. A paired bootstrap interval for the test AP difference includes zero. The results do not support a reliable P90 improvement in this setting. We discuss scorer mismatch, small-sample variability, answer-length sensitivity, and unresolved source-record provenance. The contribution is a reproducible, controlled negative-result comparison rather than a novel detector.
+
+\end{abstract}
+\keywords{hallucination detection, token uncertainty, negative log-likelihood, controlled comparison, surrogate language model}
+\begin{document}
+\maketitle
+\section{Introduction}
+This implementation study follows an earlier literature-review manuscript by the same author, \emph{Token-Level Uncertainty as a Predictor of Hallucination in Large Language Models}. That review surveyed token-level and semantic uncertainty approaches and highlighted aggregation and evaluation as open methodological issues. The present manuscript is a separate, original controlled experiment; it does not present the review's illustrative figures as experimental evidence.
+
+Large language models can produce fluent but unsupported statements. Detecting such responses without reference answers remains difficult. Prior work has investigated internal representations, self-consistency, semantic uncertainty and token-level uncertainty as potential detection signals \cite{azaria2023,chen2024,farquhar2024,fadeeva2024}. A simple likelihood-based baseline aggregates token losses over a response, but an average may dilute a small number of exceptionally uncertain tokens. This motivates examining a high quantile of token loss rather than assuming that every token contributes equally.
+
+Our central research question is: \emph{Does the 90th percentile of answer-token NLL rank hallucinated responses better than mean answer-token NLL when the scorer and examples are held fixed?} A second question asks whether observed differences vary with answer length. We use a controlled comparison of already computed scores rather than retraining a model. The study tests a modest empirical hypothesis, not a claim of algorithmic novelty.
+
+Three distinctions matter. First, likelihood under a surrogate model is not the confidence of the model that wrote the response. Second, ranking metrics such as average precision (AP) assess association with the supplied labels, not causal evidence of factuality. Third, validation-based method selection must remain separate from final test reporting. Our held-out results show that P90 does not improve AP over mean NLL in the evaluated sample.
+
+\section{Related Work}
+\subsection{Uncertainty and hallucination}
+Semantic entropy groups semantically equivalent generations to estimate uncertainty beyond raw token variation \cite{kuhn2023,farquhar2024}. Semantic entropy probes investigate efficient prediction of such signals \cite{kossen2024}. These approaches differ from our single-pass, token-loss summaries: our experiment neither clusters alternative generations nor trains a probe. Their existence motivates studying uncertainty, but does not imply that token-loss quantiles must be effective.
+
+\subsection{Token-level and internal-state approaches}
+Token-level uncertainty has been examined for fact-checking generated output \cite{fadeeva2024}; relevance-aware uncertainty aggregation has also been proposed \cite{duan2024}. Other detectors use internal representations \cite{azaria2023,chen2024}, whereas black-box self-checking methods compare multiple sampled generations \cite{manakul2023}. We deliberately isolate a narrower contrast: two fixed aggregation functions of the \emph{same} answer-token losses. Consequently, observed differences can be attributed to ranking induced by aggregation within this dataset, but not to a general advantage over the cited systems. The bibliographic entries in this draft were transcribed from the student's earlier review and should be independently checked against publisher records before submission.
+
+\section{Research Questions and Protocol}
+\textbf{RQ1:} Does P90 NLL yield higher held-out AP than mean NLL? \textbf{RQ2:} Does the comparison change descriptively across short and long answers? \textbf{RQ3:} How do both NLL signals compare with answer-token length alone?
+
+We selected a controlled comparative study rather than an architecture modification. Both uncertainty measures use identical source responses, tokenizer, scoring model and labels. The positive class denotes a response labeled hallucinated. Higher NLL and greater answer length were prespecified as higher-risk directions; directions were not reversed after test inspection. AP is the primary ranking metric; area under the receiver operating characteristic curve (AUROC) is secondary. No test threshold is selected and thus no threshold-dependent F1 score is reported.
+
+\section{Data and Implementation}
+\subsection{Dataset and partition}
+The experiment used 600 sampled examples from HaluEval's \texttt{general\_data} file. The recorded seed was 42. The data were partitioned into training (420: 343 negative, 77 positive), validation (90: 76 negative, 14 positive), and test (90: 73 negative, 17 positive). An earlier preparation run reported no normalized-question overlap between splits. However, the saved scoring files do not contain original HaluEval source IDs, so source-record disjointness has not been independently reconstructed from those files. This limitation is not silently treated as resolved.
+
+\subsection{Surrogate scoring}
+DistilGPT-2 was used as a publicly available causal language model to score responses written by a different generator. The input concatenates the question and answer:
+\begin{equation}
+ x=\texttt{Question: }q\;\texttt{\\nAnswer: }a.
+\end{equation}
+For answer-token positions $t\in\mathcal{A}$, the negative log-likelihood is
+\begin{equation}
+ \ell_t=-\log p_{\theta}(x_t\mid x_{<t}).\label{eq:nll}
+\end{equation}
+Only answer tokens are included; a token that straddles the prompt--answer boundary is excluded. Earlier validation reported one such boundary-crossing token per scored row and no context trimming. Let $m=|\mathcal{A}|$. The two fixed aggregation rules are
+\begin{equation}
+ s_{\mathrm{mean}}=\frac{1}{m}\sum_{t\in\mathcal{A}}\ell_t,\qquad
+ s_{\mathrm{P90}}=Q_{0.90}(\{\ell_t:t\in\mathcal{A}\}).\label{eq:agg}
+\end{equation}
+The control is $s_{\mathrm{len}}=m$. Both NLL methods are evaluated as continuous ranking scores, not calibrated probabilities of hallucination. All 600 rows received finite scores with positive answer-token counts.
+
+\subsection{Baseline checks and debugging}
+A baseline audit confirmed numeric score integrity and independently checked the equivalence of cross-entropy and gathered log-softmax token losses on a synthetic sentence. It did not independently recompute all 600 original rows. A separate identifier collision was detected because original source IDs had been dropped during preparation and each split was assigned overlapping positional IDs. The repair prefixed IDs with split names (e.g., \texttt{test\_0}) without changing scores. These identifiers are experiment-specific, not recovered source IDs. The optional original-row recomputation was not performed.
+
+\subsection{Method selection and uncertainty analysis}
+Validation AP selected P90 ahead of mean NLL; the held-out test split was reserved for one final comparison. We report both methods regardless of test ranking. A paired bootstrap resampled test rows together across methods for 2,000 replicates to summarize the difference $\mathrm{AP}_{\mathrm{P90}}-\mathrm{AP}_{\mathrm{mean}}$. This is an exploratory interval, not a significance claim. For length sensitivity, the short/long cutoff of 118 answer tokens was fixed from the validation median, not optimized on test data.
+
+\section{Results}
+\subsection{Validation selection}
+Table~\ref{tab:val} reports the validation comparisons. P90 AP exceeded mean NLL AP by 0.03675. The positive class comprised only 14 validation examples, making method selection potentially sensitive to a small number of ranks.
+\begin{table}[t]
+\caption{Validation ranking metrics ($n=90$, 14 positives). Higher is better.}\label{tab:val}
+\centering\begin{tabular}{lcc}\toprule Method & AP & AUROC\\\midrule
+Mean NLL & 0.2460 & 0.5789\\
+P90 NLL & \textbf{0.2827} & \textbf{0.5883}\\
+Answer length & 0.2220 & 0.4356\\\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Held-out test}
+Table~\ref{tab:test} reports the untouched test evaluation. Contrary to the validation ordering, mean NLL achieved higher test AP than P90. The difference $\mathrm{AP}_{\mathrm{P90}}-\mathrm{AP}_{\mathrm{mean}}$ was $-0.02014$. P90 had a small descriptive AUROC advantage of 0.00725; both AUROC values were close to 0.5. The test positive prevalence was 17/90 = 0.1889, which also gives the no-skill AP reference for a constant-score ranking.
+\begin{table}[t]
+\caption{Held-out test results ($n=90$, 17 positives).}\label{tab:test}
+\centering\begin{tabular}{lcc}\toprule Method & AP & AUROC\\\midrule
+Mean NLL & \textbf{0.2234} & 0.4972\\
+P90 NLL & 0.2033 & \textbf{0.5044}\\
+Answer length & 0.1777 & 0.3284\\\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering\includegraphics[width=\columnwidth]{figures/test_precision_recall.pdf}
+\caption{Held-out precision--recall curves exported by the executed Prompt 13 evaluation.}\label{fig:pr}
+\end{figure}
+\begin{figure}[t]
+\centering\includegraphics[width=\columnwidth]{figures/test_roc.pdf}
+\caption{Held-out ROC curves exported by the executed Prompt 13 evaluation.}\label{fig:roc}
+\end{figure}
+Figures~\ref{fig:pr} and \ref{fig:roc} present the recorded ranking curves. The exploratory paired bootstrap 95\% interval for the AP difference was $[-0.10752,0.05195]$. Because it crosses zero, these data do not establish a stable advantage for either aggregation. We do not report a $p$-value.
+
+\subsection{Answer-length sensitivity}
+The validation-derived threshold of 118 tokens split test examples into 49 short responses (12 positives) and 41 long responses (5 positives). Table~\ref{tab:length} shows that mean NLL had higher AP within short answers while P90 had higher AP within long answers. The groups differ substantially in prevalence and the long group contains only five positives. These are descriptive within-group rankings, not evidence of a causal interaction.
+\begin{table}[t]
+\caption{Exploratory test AP by validation-fixed length group.}\label{tab:length}
+\centering\begin{tabular}{lcccc}\toprule
+Group & $n$ & Pos. & Mean & P90\\\midrule
+Short ($\leq118$) & 49 & 12 & \textbf{0.2938} & 0.2588\\
+Long ($>118$) & 41 & 5 & 0.1422 & \textbf{0.1830}\\\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+\subsection{Interpreting the negative result}
+The main hypothesis was not supported by held-out AP: emphasizing high-loss tokens with P90 did not yield a reliable improvement over mean NLL. This does not establish that mean NLL is universally better. P90 may react strongly to uncommon words, rare entities or unusual surface forms, which need not imply factual error. Conversely, a concentrated high-loss span could sometimes highlight problematic content. We did not inspect token-level explanations for the specific source responses, so these remain hypotheses.
+
+Validation/test reversal is plausible given the small number of positive examples. AP is especially sensitive to the ranking of positives near the top of the list, and the test bootstrap interval is broad. AUROC near 0.5 further limits claims about effective detection in this setting. The answer-length control also performed poorly under the prespecified direction. These observations suggest that simple scalar signals from this surrogate scorer are weak predictors for this sample, but cannot be extrapolated to all models or datasets.
+
+\subsection{Failure-case audit}
+The evaluation exported 15 rows with the largest disagreements between percentile ranks of mean and P90 scores. For example, \texttt{test\_77} (label 0) moved from a mean-score rank percentile of 0.0667 to a P90 percentile of 0.8111; \texttt{test\_65} (label 1) moved from 0.1333 to 0.8000. The former illustrates a potentially harmful increase in relative risk for a negative example, and the latter a potentially useful increase for a positive example. Without source texts or per-token attributions, these examples cannot be interpreted as verified explanations of hallucination mechanisms.
+
+\subsection{Threats to validity}
+\textbf{Surrogate mismatch:} DistilGPT-2 was not the response generator; its token likelihood cannot be equated with the generator's epistemic confidence. \textbf{Sample size:} The test contains 17 positives, limiting precision. \textbf{Data provenance:} Original IDs were dropped, and source-level record disjointness remains unverified. \textbf{Scoring verification:} Arithmetic was independently checked on a smoke example, not on every source response. \textbf{Scope:} One sampled subset, one seed, one scorer and one quantile were evaluated. \textbf{Resource claims:} No measured runtime or energy comparison was available. These limitations restrict both internal and external validity.
+
+\section{Reproducibility and Research Integrity}
+The experimental record includes scored train/validation/test CSVs, a baseline-validation JSON, a frozen validation protocol, test metric CSV, evaluation audit JSON, rank-disagreement examples and exported figures. The evaluation script checked score integrity and reported no test-threshold tuning; however, synthetic IDs alone cannot prove source-record disjointness. The primary test numbers in this paper were transcribed from \texttt{results.csv}, not simulated or estimated.
+
+AI tools assisted in drafting code, debugging the ID collision, interpreting output and preparing this manuscript. The student supplied genuine Colab execution results. The authorship and bibliographic metadata require final student review; code execution and statistical conclusions should be independently reproducible from the project files.
+
+
+\section{Detailed Evaluation Audit}
+\subsection{Why ranking evaluation is appropriate}
+The experiment does not train a binary decision threshold. Instead, each scalar score induces an ordering of the held-out responses. This design makes AP a suitable primary metric for an imbalanced positive class. AP summarizes the precision values encountered as recall increases, with greater emphasis on the top-ranked examples than a metric that only considers a single threshold. AUROC measures the probability that a randomly drawn positive example is ranked above a randomly drawn negative example, with the usual treatment of ties. These metrics answer different questions; an improvement in one need not imply an improvement in the other.
+
+The reported AP values should be interpreted relative to the positive-label prevalence. On the test set, 17 of 90 examples are positive. Thus a constant-score reference corresponds to an AP of approximately 0.1889, while the proposed P90 AP is 0.2033. The absolute difference from this prevalence reference is small. Importantly, this reference is not a new fitted model, and it does not validate the hallucination labels themselves. A ranking metric can only measure consistency with the benchmark annotations supplied to the evaluator.
+
+\subsection{Checks performed before metric calculation}
+The Prompt 13 evaluation recorded a passing preflight and score-file integrity check. The files used a common label definition, score columns and split convention. The test comparison was based on 90 rows for each method, rather than allowing each method to evaluate a different subset of examples. A previous debugging step repaired the collision of positional identifiers across splits; the correction changed identifiers only. The evaluation therefore treats the three score columns as matched measurements for the same test rows.
+
+There is a crucial distinction between \emph{internal consistency} and \emph{source provenance}. The split-prefixed IDs are unique within the experiment, which supports matching of the saved score columns. They do not prove that the original HaluEval source rows are distinct or that no source text was duplicated. A stronger provenance audit would retrieve the original source dataset, match each saved question and answer back to its source record, verify source-ID uniqueness, and recheck the saved split assignments. This was not completed in the present study.
+
+\subsection{Interpreting the paired bootstrap}
+For each bootstrap replicate, the same sampled test-row indices are applied to the mean-NLL and P90-NLL score arrays. The resulting AP difference is therefore paired: variation due to selecting a different set of test rows is shared between methods. The 2,000-replicate percentile interval summarizes how the observed difference varies under this resampling procedure. It is not an independent replication on a new dataset, does not incorporate uncertainty in the source labels, and does not correct for method selection on validation. In particular, the interval spanning zero does not prove equality of the methods; it indicates that the available sample does not establish a clear AP difference.
+
+\section{Additional Interpretation and Practical Implications}
+\subsection{What the comparison isolates}
+Because mean and P90 are computed from the same token losses, the experiment isolates the choice of aggregation function. It does not isolate the effect of the language model used to produce those losses, the factuality annotation process, or the answer-generation process. This is useful as a focused ablation: a different ranking can arise even when all underlying token probabilities remain unchanged. However, a positive result here would still not establish that the high-loss tokens correspond to factually unsupported spans. Such a claim would require token-level annotation or careful alignment of high-loss positions to verified errors.
+
+The rank-disagreement file offers a starting point for that investigation. The contrast between \texttt{test\_77} and \texttt{test\_65} illustrates why aggregate metric changes can hide mixed individual outcomes. For some examples, moving upward in the risk ranking is useful; for others, the same movement is harmful. A future analysis should recover the source answer text and inspect whether high-loss tokens reflect named entities, rare vocabulary, syntactic patterns, answer length, or factual errors. Without this inspection, an explanation based on rare words or entity mentions remains speculative.
+
+\subsection{Why the answer-length control matters}
+Answer length is an inexpensive comparator because it requires no model likelihood computation once tokenization is available. If longer answers were systematically more likely to be labelled hallucinated, an uncertainty measure correlated with length might appear predictive for a trivial reason. Including length as a control provides a first check against this interpretation. Here, answer length alone had AP 0.1777 and AUROC 0.3284 on test under the prespecified larger-means-riskier direction. That result does not demonstrate a strong positive length signal. It also does not establish that the NLL metrics are independent of length: a proper adjusted analysis would require an explicitly specified multivariable model or matched-length comparison, with parameters chosen without test leakage.
+
+The exploratory short/long analysis is informative but fragile. The short group had 12 positives out of 49 examples; the long group had only five positives out of 41. AP depends on prevalence, so a lower AP in the long group may reflect both poorer ranking and fewer positives. Comparing the two NLL methods \emph{within} each group is more meaningful than directly comparing AP across groups, but even those within-group contrasts have high sampling uncertainty. The results should motivate a larger preregistered sensitivity analysis rather than a post hoc claim that P90 works better for long answers.
+
+\subsection{Scope of the research contribution}
+The work is best described as a controlled empirical comparison with a negative primary outcome. It preserves a common scorer and dataset, evaluates two transparent aggregations, records a validation-based selection, and reports the held-out reversal rather than selecting the better test metric after the fact. This is a defensible course-level research contribution. It does not reproduce the full experimental protocol of semantic entropy, semantic entropy probes, internal-state detectors, or token-level fact-checking systems, and their published results should not be placed in a direct numerical leaderboard against this experiment without harmonizing datasets, models, labels and evaluation procedures.
+
+\section{Next-Step Verification Priorities}
+\textbf{Priority 1: source alignment.} Reconstruct original HaluEval IDs by matching the saved questions and responses against the original dataset; verify that every selected row has exactly one source match. Preserve an explicit mapping file and rerun split-disjointness checks. This addresses a concrete audit gap before any stronger claims about data integrity.
+
+\textbf{Priority 2: scoring spot checks.} Select a small stratified set of original examples and independently recompute token losses from the recorded model and tokenizer configuration. Compare answer-token counts, mean NLL and P90 NLL with stored values. A synthetic arithmetic smoke test is valuable, but source-specific recomputation would provide stronger evidence that the preprocessing boundary and token-selection logic were applied as intended.
+
+\textbf{Priority 3: external validity.} Freeze the same aggregations and evaluation metrics, then repeat the study with a larger held-out sample and multiple independently documented seeds. Separately test another scorer to determine whether the weak discrimination is particular to DistilGPT-2. If aligned generator log probabilities become available, compare them with surrogate-model scores under the same examples. These are proposed experiments, not results of the present work.
+
+
+\section{Reproduction Checklist and Evidence Boundaries}
+\subsection{Data and artifacts}
+The evidence chain begins with the 600-row sample and the three saved score partitions. The training partition is retained for consistency with the original protocol, but the present scalar ranking comparison does not fit parameters on it. The validation partition is used for selecting between fixed score functions, and the test partition is used only for the reported held-out comparison. The exported validation-comparison CSV records AP and AUROC for each candidate, and the frozen protocol JSON records the selected signal and evaluation direction. The test results CSV, audit JSON and plotted curves are the numerical basis for the Results section. Retaining these files makes it possible to trace each table cell back to an executed evaluation rather than to a manually constructed illustration.
+
+A second student should first check that the three partitions contain 420, 90 and 90 rows, that their labels are binary, and that all score columns are numeric and finite. They should then confirm that the test set contains 17 positive labels and that the same 90 rows are used for every method. Next, they should compute AP and AUROC from the three fixed score columns without reversing directions based on the observed test outcomes. Finally, they should compare the recomputed values against Table~\ref{tab:test} to the displayed precision, regenerate Figs.~\ref{fig:pr} and \ref{fig:roc}, and confirm that the validation-based cutoff of 118 tokens is used in the subgroup analysis. These are reproducibility instructions, not a claim that a second independent researcher has already completed them.
+
+\subsection{What is and is not established}
+The reported outputs support three concrete observations: the P90 aggregation was preferred on validation AP; its held-out test AP was lower than mean NLL; and the two aggregations induced different rankings for individual examples. They also support descriptive AUROC and subgroup comparisons. The outputs do not establish why a particular token was high loss, whether the benchmark's hallucination labels are error-free, whether performance would persist under another seed, or whether uncertainty from the original response generator would behave similarly. These are distinct empirical questions requiring different evidence.
+
+A common error in uncertainty research is to conflate low language-model probability with factual incorrectness. Probability is influenced by lexical frequency, tokenization and contextual predictability; a perfectly true but unusual answer can be difficult for a language model to predict. Conversely, a conventional but false statement can receive high likelihood. The present design tests whether the chosen score correlates with labels in one benchmark sample, not whether it captures a universal notion of epistemic uncertainty. This distinction is particularly important because the model used to compute likelihoods is not the model that generated the answers.
+
+\subsection{Documentation and authorship}
+The research record should preserve the notebook version used for scoring, the corrected score ZIP, the frozen comparison protocol, the evaluation notebook, its exported metrics and plots, and the debugging log. Changes to identifiers should be recorded as metadata repairs rather than model improvements. The student should verify the original-paper metadata in \texttt{references.bib}, fill in author and affiliation fields, check the institution's required manuscript template, and compile the LaTeX project again before submission. AI-assisted drafting should be disclosed according to course policy, with the student responsible for understanding every methodological choice and for defending the numerical conclusions.
+
+\section{Conclusion}
+Under a fixed surrogate-scoring protocol on 90 held-out HaluEval responses, P90 token NLL did not improve hallucination-ranking AP over mean NLL (0.2033 vs. 0.2234). The validation advantage did not persist, and the bootstrap interval for the difference included zero. The study provides a controlled negative-result comparison and identifies practical limitations: surrogate-model mismatch, small positive counts and incomplete original-record provenance. The most useful next steps are restoring source alignment and inspecting token-level failures, evaluating additional seeds or larger samples, and testing scorer dependence. No claim of a new detection algorithm or statistically established gain is made.
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+\end{document}

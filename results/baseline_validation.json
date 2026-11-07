@@ -1,0 +1,44 @@
+{
+  "model": "distilgpt2",
+  "source_scoring_zip": "AITR_Prompt09B_scores.zip",
+  "identifier_note": "Split-specific row IDs created if original scoring IDs collided; these are not HaluEval source IDs.",
+  "splits": {
+    "train": {
+      "rows": 420,
+      "label_counts": {
+        "0": 343,
+        "1": 77
+      },
+      "mean_answer_token_length": 114.5547619047619,
+      "boundary_crossing_rows": 420,
+      "context_trimmed_rows": 0
+    },
+    "validation": {
+      "rows": 90,
+      "label_counts": {
+        "0": 76,
+        "1": 14
+      },
+      "mean_answer_token_length": 120.35555555555555,
+      "boundary_crossing_rows": 90,
+      "context_trimmed_rows": 0
+    },
+    "test": {
+      "rows": 90,
+      "label_counts": {
+        "0": 73,
+        "1": 17
+      },
+      "mean_answer_token_length": 113.34444444444445,
+      "boundary_crossing_rows": 90,
+      "context_trimmed_rows": 0
+    }
+  },
+  "checks": {
+    "score_integrity": "PASS",
+    "id_integrity": "PASS",
+    "independent_arithmetic_smoke": "PASS",
+    "smoke_max_abs_difference": 0.0,
+    "original_row_audit": "NOT PERFORMED"
+  }
+}

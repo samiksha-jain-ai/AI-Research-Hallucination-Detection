@@ -1,0 +1,5 @@
+group,method,n,positives,validation_ap
+short,mean_nll,46,9,0.35068649885583525
+short,p90_nll,46,9,0.3309737678710205
+long,mean_nll,44,5,0.174616368286445
+long,p90_nll,44,5,0.31987743557510995

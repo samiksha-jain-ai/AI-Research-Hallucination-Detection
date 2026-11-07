@@ -1,0 +1,29 @@
+{
+  "prompt": 13,
+  "dataset": "HaluEval general_data, 600 sampled rows",
+  "model": "distilgpt2 surrogate scorer",
+  "positive_label": 1,
+  "selection_source": "Prompt 12 validation AP",
+  "frozen_selected_signal": "p90_nll",
+  "primary_metric": "average_precision",
+  "secondary_metric": "auroc",
+  "split_counts": {
+    "train": 420,
+    "validation": 90,
+    "test": 90
+  },
+  "test_positive_count": 17,
+  "test_prevalence": 0.18888888888888888,
+  "preflight": "PASS",
+  "score_file_integrity": "PASS",
+  "source_record_overlap": "NOT VERIFIED (synthetic split IDs)",
+  "original_row_audit": "NOT PERFORMED",
+  "test_threshold_tuning": "NONE",
+  "paired_bootstrap_replicates": 2000,
+  "bootstrap_ap_difference_ci_95": [
+    -0.10751971458308351,
+    0.05195318599782934
+  ],
+  "bootstrap_note": "Exploratory paired row bootstrap; not a statistical-significance claim",
+  "validation_median_length_cutoff": 118.0
+}
