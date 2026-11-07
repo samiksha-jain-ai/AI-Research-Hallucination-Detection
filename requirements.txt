@@ -1,0 +1,6 @@
+# Minimum dependencies for scripts/evaluate_scores.py; tested here with scikit-learn 1.8.0.
+numpy>=1.24,<3
+pandas>=2.0,<3
+scikit-learn>=1.3,<2
+# Colab scoring notebooks additionally require torch, transformers, requests and tqdm.
+# Their precise historical Colab versions are documented in the run notes, not pinned here.
